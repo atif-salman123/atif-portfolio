@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>One Rider, Two Dinners: The Analytics Behind Pooled Delivery — Atif Salman Sheikh</title>
+<meta name="description" content="How a delivery platform decides which orders should share a ride — an experimentation and measurement problem long before it's a product one."/>
+<meta name="author" content="Atif Salman Sheikh"/>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="One Rider, Two Dinners: The Analytics Behind Pooled Delivery"/>
+<meta property="og:description" content="How a delivery platform decides which orders should share a ride — a measurement problem long before it's a product one."/>
+<meta property="og:image" content="../assets/atif.jpg"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="One Rider, Two Dinners: The Analytics Behind Pooled Delivery"/>
+<meta name="twitter:description" content="How a delivery platform decides which orders should share a ride — a measurement problem long before it's a product one."/>
+<link rel="stylesheet" href="../style.css"/>
+<script>window.MathJax={tex:{inlineMath:[['\\(','\\)']],displayMath:[['$$','$$']]},svg:{fontCache:'global'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+<nav class="nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html">Atif&nbsp;Salman&nbsp;Sheikh</a>
+    <div class="links">
+      <a href="../index.html#writing">Writing</a>
+      <a href="../index.html#speaking" class="hide-sm">Speaking</a>
+      <a href="../index.html#about">About</a>
+      <a href="../index.html#contact">Contact</a>
+    </div>
+  </div>
+</nav>
+<article class="article">
+<a class="back" href="../index.html#writing">← All writing</a>
+
+
+<div class="kicker">Product &amp; Business Strategy · Experimentation</div>
+<h1>One Rider, Two Dinners: The Analytics Behind Pooled Delivery</h1>
+<p class="dek">How a delivery platform decides which orders should share a ride — and why getting it right is a measurement problem long before it's a product one.</p>
+<div class="byline"><b>Atif Salman</b> &nbsp;·&nbsp; Marketplace &amp; Logistics Analytics · On-Demand Delivery &nbsp;·&nbsp; July 2026</div>
+
+<p>It's 8pm. Someone orders a burger. A few streets away, someone else orders dinner from the place next door. Both tap <em>order</em> within a couple of minutes of each other, both live in the same cluster of towers, and neither knows the other exists. Behind the screen, a decision gets made in seconds that neither of them will ever see: should these two dinners travel on one rider's bike, or two?</p>
+
+<p>That decision is called pooling, and most of the time the customer never learns it happened. The food arrives. It was warm. As far as they're concerned, a rider brought their order — they don't know that same rider was also carrying somebody else's dinner, dropped a few minutes before or after theirs.</p>
+
+<p>Pooling is one of the largest cost levers in last-mile delivery and one of the easiest to get quietly wrong. The reason it's hard isn't the routing maths. It's that every improvement you can make trades cost against customer experience, and you cannot manage that trade until you can <em>measure</em> it honestly. That measurement is the part I've spent my time on, and it's what this piece is really about.</p>
+
+<h2>Pooling, without the jargon</h2>
+<p>Strip away the operations language and pooling is a carpool for food. Instead of sending one rider per order, the platform occasionally hands a single rider two orders heading roughly the same way at roughly the same time, to be picked up and dropped off on one continuous trip.</p>
+
+<p>There are two flavours. The simple one: both orders come from the same restaurant. The rider walks in once, collects two bags, delivers them to two nearby doors. The harder one: the two orders come from different restaurants that happen to sit close together, so the rider makes two quick pickups before heading out. Same idea, more moving parts.</p>
+
+<figure>
+<svg viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<rect width="760" height="340" fill="#fff"/>
+<text x="30" y="40" font-size="19" font-weight="bold" fill="#1a2b3c">Two orders, one trip</text>
+<text x="30" y="62" font-size="13" fill="#6b7a8d">Two pickups close together, two drop-offs close together — folded into a single continuous route.</text>
+<path d="M110 210 C 200 150, 280 150, 340 200 S 500 250, 560 190 S 660 150, 690 200" fill="none" stroke="#2c7be5" stroke-width="2.4" stroke-dasharray="6 5"/>
+<circle cx="110" cy="210" r="20" fill="#fff8f4" stroke="#e8622c" stroke-width="2"/>
+<text x="110" y="215" font-size="15" text-anchor="middle" fill="#e8622c" font-weight="bold">P1</text>
+<text x="110" y="255" font-size="12.5" text-anchor="middle" fill="#6b7a8d">Kitchen A</text>
+<circle cx="200" cy="150" r="20" fill="#fff8f4" stroke="#e8622c" stroke-width="2"/>
+<text x="200" y="155" font-size="15" text-anchor="middle" fill="#e8622c" font-weight="bold">P2</text>
+<text x="200" y="125" font-size="12.5" text-anchor="middle" fill="#6b7a8d">Kitchen B</text>
+<circle cx="400" cy="215" r="24" fill="#1a2b3c"/>
+<text x="400" y="221" font-size="15" text-anchor="middle" fill="#fff" font-weight="bold">1</text>
+<text x="400" y="262" font-size="12.5" text-anchor="middle" fill="#6b7a8d">one rider</text>
+<circle cx="565" cy="188" r="20" fill="#f4f8f6" stroke="#2fa36b" stroke-width="2"/>
+<text x="565" y="193" font-size="14" text-anchor="middle" fill="#2fa36b" font-weight="bold">D1</text>
+<text x="565" y="228" font-size="12.5" text-anchor="middle" fill="#6b7a8d">1st delivered</text>
+<circle cx="690" cy="200" r="20" fill="#f4f8f6" stroke="#2fa36b" stroke-width="2"/>
+<text x="690" y="205" font-size="14" text-anchor="middle" fill="#2fa36b" font-weight="bold">D2</text>
+<text x="690" y="240" font-size="12.5" text-anchor="middle" fill="#6b7a8d">2nd delivered</text>
+<text x="380" y="315" font-size="12.5" text-anchor="middle" fill="#6b7a8d">One bike does the work of two — the saving — but the second drop-off waits through the first.</text>
+</svg>
+<figcaption>Pooling folds two orders into one route: two quick pickups, then two drop-offs. The saving is real, but notice the asymmetry already built into the picture — one customer is always delivered second.</figcaption>
+</figure>
+
+<p>That's the whole concept. Everything interesting is in deciding <em>which</em> orders should travel together — and in learning to measure the harm hiding in that second drop-off.</p>
+
+<h2>Which orders get pooled: two gates, and a simulator to tune them</h2>
+<p>Every order that could be pooled runs two gates. The first is <strong>eligibility</strong>: should this order even be a candidate? The second is <strong>pairing</strong>: given two eligible orders, can <em>these two specific</em> orders actually share a trip? Two words recur once you're inside the pairing gate, so it's worth fixing them now: the <strong>anchor</strong> is the order already in hand — the one a rider is being lined up for — and the <strong>candidate</strong> is a later order being weighed up to join it. Pairing always asks whether a candidate can be slotted onto an anchor's trip.</p>
+
+<p>It also helps to separate two kinds of factor before listing them. Some are conditions of the marketplace we don't set directly — how dense the demand is in a zone right now, how short of riders it is. These decide whether good pooling is even on the table. The rest are thresholds we choose deliberately — how close two orders must sit in time, how far a detour may stretch — and they decide how close to that ceiling we run, and at what cost to the customer. The distinction matters because the two are improved in completely different ways, and confusing them is how a team ends up tuning a dial when it should be growing a zone.</p>
+
+<figure>
+<svg viewBox="0 0 760 624" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<rect width="760" height="624" fill="#fff"/>
+<text x="30" y="34" font-size="19" font-weight="bold" fill="#1a2b3c">How an order gets pooled: two gates, eight factors</text>
+<text x="30" y="56" font-size="13" fill="#6b7a8d">Eligibility decides if an order can be a candidate; pairing decides if two candidates can share one trip.</text>
+
+<line x1="380" y1="82" x2="380" y2="498" stroke="#e3e8ee" stroke-width="1.4"/>
+
+<text x="195" y="100" font-size="13" text-anchor="middle" fill="#e8622c" font-weight="bold" letter-spacing="0.06em">GATE 1 · ELIGIBILITY</text>
+<text x="565" y="100" font-size="13" text-anchor="middle" fill="#2c7be5" font-weight="bold" letter-spacing="0.06em">GATE 2 · PAIRING</text>
+
+<!-- ELIGIBILITY CHIPS -->
+<g>
+<rect x="30" y="118" width="330" height="82" rx="9" fill="#f7f9fb" stroke="#e3e8ee"/>
+<circle cx="64" cy="159" r="15" fill="#fff8f4" stroke="#e8622c" stroke-width="1.6"/>
+<text x="64" y="164" font-size="14" text-anchor="middle" fill="#e8622c" font-weight="bold">1</text>
+<text x="92" y="154" font-size="14" fill="#1a2b3c" font-weight="bold">Merchant exclusion</text>
+<text x="92" y="176" font-size="12" fill="#6b7a8d">Some kitchens &amp; premium partners never pool</text>
+
+<rect x="30" y="216" width="330" height="82" rx="9" fill="#f7f9fb" stroke="#e3e8ee"/>
+<circle cx="64" cy="257" r="15" fill="#fff8f4" stroke="#e8622c" stroke-width="1.6"/>
+<text x="64" y="262" font-size="14" text-anchor="middle" fill="#e8622c" font-weight="bold">2</text>
+<text x="92" y="252" font-size="14" fill="#1a2b3c" font-weight="bold">Large orders</text>
+<text x="92" y="274" font-size="12" fill="#6b7a8d">Big baskets are set aside — no shared trip</text>
+
+<rect x="30" y="314" width="330" height="82" rx="9" fill="#f7f9fb" stroke="#e3e8ee"/>
+<circle cx="64" cy="355" r="15" fill="#fff8f4" stroke="#e8622c" stroke-width="1.6"/>
+<text x="64" y="360" font-size="14" text-anchor="middle" fill="#e8622c" font-weight="bold">3</text>
+<text x="92" y="350" font-size="14" fill="#1a2b3c" font-weight="bold">Supply stress</text>
+<text x="92" y="372" font-size="12" fill="#6b7a8d">Scarce riders? Pool more to stretch supply</text>
+
+<rect x="30" y="412" width="330" height="82" rx="9" fill="#f7f9fb" stroke="#e3e8ee"/>
+<circle cx="64" cy="453" r="15" fill="#fff8f4" stroke="#e8622c" stroke-width="1.6"/>
+<text x="64" y="458" font-size="14" text-anchor="middle" fill="#e8622c" font-weight="bold">4</text>
+<text x="92" y="448" font-size="14" fill="#1a2b3c" font-weight="bold">Anchor's max promised time</text>
+<text x="92" y="470" font-size="12" fill="#6b7a8d">No slack in the promise, no room to detour</text>
+</g>
+
+<!-- PAIRING CHIPS -->
+<g>
+<rect x="400" y="118" width="330" height="82" rx="9" fill="#f7f9fb" stroke="#e3e8ee"/>
+<circle cx="434" cy="159" r="15" fill="#eef4fd" stroke="#2c7be5" stroke-width="1.6"/>
+<text x="434" y="164" font-size="14" text-anchor="middle" fill="#2c7be5" font-weight="bold">1</text>
+<text x="462" y="154" font-size="14" fill="#1a2b3c" font-weight="bold">Time between orders</text>
+<text x="462" y="176" font-size="12" fill="#6b7a8d">Placed close enough in time to combine</text>
+
+<rect x="400" y="216" width="330" height="82" rx="9" fill="#f7f9fb" stroke="#e3e8ee"/>
+<circle cx="434" cy="257" r="15" fill="#eef4fd" stroke="#2c7be5" stroke-width="1.6"/>
+<text x="434" y="262" font-size="14" text-anchor="middle" fill="#2c7be5" font-weight="bold">2</text>
+<text x="462" y="252" font-size="14" fill="#1a2b3c" font-weight="bold">Detour ratio</text>
+<text x="462" y="274" font-size="12" fill="#6b7a8d">Shared trip vs the two solo trips</text>
+
+<rect x="400" y="314" width="330" height="82" rx="9" fill="#f7f9fb" stroke="#e3e8ee"/>
+<circle cx="434" cy="355" r="15" fill="#eef4fd" stroke="#2c7be5" stroke-width="1.6"/>
+<text x="434" y="360" font-size="14" text-anchor="middle" fill="#2c7be5" font-weight="bold">3</text>
+<text x="462" y="350" font-size="14" fill="#1a2b3c" font-weight="bold">Candidate promised-time gap</text>
+<text x="462" y="372" font-size="12" fill="#6b7a8d">Promised delivery times must line up</text>
+
+<rect x="400" y="412" width="330" height="82" rx="9" fill="#f7f9fb" stroke="#e3e8ee"/>
+<circle cx="434" cy="453" r="15" fill="#eef4fd" stroke="#2c7be5" stroke-width="1.6"/>
+<text x="434" y="458" font-size="14" text-anchor="middle" fill="#2c7be5" font-weight="bold">4</text>
+<text x="462" y="448" font-size="14" fill="#1a2b3c" font-weight="bold">Candidate pickup ETA</text>
+<text x="462" y="470" font-size="12" fill="#6b7a8d">Anchor already near pickup? Too late to add</text>
+</g>
+
+<!-- FOUNDATION: DEMAND DENSITY -->
+<rect x="30" y="520" width="700" height="86" rx="10" fill="#f4f8f6" stroke="#cfe6da"/>
+<text x="52" y="548" font-size="14" fill="#1a2b3c" font-weight="bold">Underneath both gates &#183; Demand density</text>
+<text x="52" y="569" font-size="12" fill="#6b7a8d">How many orders cluster in this zone and window — a condition we don't set, only grow.</text>
+<text x="52" y="591" font-size="12" fill="#2fa36b" font-weight="bold">Feeds eligibility: is there any partner at all?&#160;&#160;&#160;&#183;&#160;&#160;&#160;Feeds pairing: is the closest partner a good one?</text>
+</svg>
+<figcaption>The two gates and their factors. Eligibility asks whether an order belongs in the pool at all; pairing asks whether a candidate can actually travel with the anchor. Demand density sits under both gates — it decides whether an eligible order has any partner, and whether the closest one is a good one — while the timing, detour, promised-time and pickup rules are thresholds we tune.</figcaption>
+</figure>
+
+<p>The pairing gate is the one worth writing down. Four conditions, and a pair only survives if it clears all four: the two orders were placed close enough together in time, the detour is small enough, their promised delivery times line up, and the anchor isn't already so close to its own pickup that there's no time left to slot in a second one.</p>
+
+<div class="eqbox">
+$$ \text{poolable}(a,b) \;=\; \bigl[\,|t_a - t_b| \le W\,\bigr]\;\wedge\;\bigl[\,\rho_{ab} \le \rho^{*}\,\bigr]\;\wedge\;\bigl[\,|p_a - p_b| \le \Delta p^{*}\,\bigr]\;\wedge\;\bigl[\,\tau^{\text{pick}}_a \ge \tau^{*}\,\bigr] $$
+<div class="lbl">Order-time gap, detour ratio, promised-time gap, and the anchor's remaining time-to-pickup — all four must hold</div>
+</div>
+
+<p>The middle term is the one worth naming. The <em>detour ratio</em> asks how far the second stop drags the rider off the natural route — and it has to be computed independently for each candidate pair, never as a running total down a route.</p>
+
+<div class="eqbox">
+$$ \rho_{ab} \;=\; \frac{d_{\text{pooled}}(a,b)}{d_{\text{solo}}(a) + d_{\text{solo}}(b)} $$
+<div class="lbl">Detour ratio, computed per pair — the shared trip's distance against what the two solo trips would have cost</div>
+</div>
+
+<p>None of these thresholds — <span style="white-space:nowrap">\(W\)</span>, <span style="white-space:nowrap">\(\rho^{*}\)</span>, <span style="white-space:nowrap">\(\Delta p^{*}\)</span>, <span style="white-space:nowrap">\(\tau^{*}\)</span> — is a number you pick on gut feel. To set them I built a <strong>simulator</strong>: it replays the eligibility and pairing logic over historical orders, so I can move any threshold and watch what share of eligible orders would end up pooled — the <em>coverage</em> — without shipping anything to a live customer. Every one of them in this piece was set that way: swept in the simulator, read off a curve, then confirmed against real behaviour. More on both steps later.</p>
+
+<h2>Demand density: the factor underneath all the others</h2>
+<p>Of the conditions we don't set directly, one sits underneath everything else and quietly decides how much good pooling is even on the table: <strong>demand density</strong> — how many orders land in the same zone within the same short window.</p>
+
+<p>Density feeds both gates. At the eligibility gate, a near-empty zone has almost nothing to pool — there is simply rarely a second order to pair with, so the lone order isn't a missed opportunity, it never had a partner. At the pairing gate, density is what makes any given pair <em>good</em>: when many orders cluster in space and time, the closest compatible partner is genuinely close, so the detour is small and the added wait is short. Sparse density forces the opposite choice — reach for a far-away partner and accept a big detour, or don't pool at all.</p>
+
+<figure>
+<svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<rect width="760" height="360" fill="#fff"/>
+<text x="30" y="34" font-size="19" font-weight="bold" fill="#1a2b3c">More orders in a zone means better partners, not just more of them</text>
+<text x="30" y="56" font-size="13" fill="#6b7a8d">Same map, same rules — only the number of nearby orders changes.</text>
+
+<text x="210" y="84" font-size="14" text-anchor="middle" fill="#1a2b3c" font-weight="bold">Sparse zone</text>
+<text x="560" y="84" font-size="14" text-anchor="middle" fill="#1a2b3c" font-weight="bold">Dense zone</text>
+
+<rect x="70" y="94" width="280" height="196" rx="10" fill="#f7f9fb" stroke="#e3e8ee"/>
+<rect x="410" y="94" width="280" height="196" rx="10" fill="#f7f9fb" stroke="#e3e8ee"/>
+
+<!-- sparse: few dots, one forced far pair -->
+<line x1="130" y1="150" x2="290" y2="140" stroke="#d1495b" stroke-width="1.8" stroke-dasharray="5 4"/>
+<circle cx="130" cy="150" r="5" fill="#2c7be5"/>
+<circle cx="290" cy="140" r="5" fill="#2c7be5"/>
+<circle cx="110" cy="250" r="5" fill="#c9d2dc"/>
+<circle cx="305" cy="255" r="5" fill="#c9d2dc"/>
+<circle cx="205" cy="200" r="5" fill="#c9d2dc"/>
+<text x="210" y="120" font-size="11" text-anchor="middle" fill="#d1495b" font-weight="bold">far → big detour</text>
+
+<!-- dense: many dots, several short green pairs -->
+<line x1="450" y1="130" x2="490" y2="160" stroke="#2fa36b" stroke-width="1.6" opacity="0.8"/>
+<line x1="490" y1="160" x2="470" y2="205" stroke="#2fa36b" stroke-width="1.6" opacity="0.8"/>
+<line x1="515" y1="140" x2="545" y2="180" stroke="#2fa36b" stroke-width="1.6" opacity="0.8"/>
+<line x1="560" y1="128" x2="592" y2="158" stroke="#2fa36b" stroke-width="1.6" opacity="0.8"/>
+<line x1="592" y1="158" x2="620" y2="200" stroke="#2fa36b" stroke-width="1.6" opacity="0.8"/>
+<line x1="560" y1="242" x2="520" y2="228" stroke="#2fa36b" stroke-width="1.6" opacity="0.8"/>
+<line x1="600" y1="252" x2="560" y2="242" stroke="#2fa36b" stroke-width="1.6" opacity="0.8"/>
+<line x1="480" y1="252" x2="520" y2="228" stroke="#2fa36b" stroke-width="1.6" opacity="0.8"/>
+<circle cx="450" cy="130" r="5" fill="#2c7be5"/>
+<circle cx="490" cy="160" r="5" fill="#2c7be5"/>
+<circle cx="470" cy="205" r="5" fill="#2c7be5"/>
+<circle cx="515" cy="140" r="5" fill="#2c7be5"/>
+<circle cx="545" cy="180" r="5" fill="#2c7be5"/>
+<circle cx="560" cy="128" r="5" fill="#2c7be5"/>
+<circle cx="592" cy="158" r="5" fill="#2c7be5"/>
+<circle cx="620" cy="200" r="5" fill="#2c7be5"/>
+<circle cx="600" cy="252" r="5" fill="#2c7be5"/>
+<circle cx="560" cy="242" r="5" fill="#2c7be5"/>
+<circle cx="520" cy="228" r="5" fill="#2c7be5"/>
+<circle cx="480" cy="252" r="5" fill="#2c7be5"/>
+<circle cx="650" cy="150" r="5" fill="#c9d2dc"/>
+<circle cx="640" cy="240" r="5" fill="#c9d2dc"/>
+
+<text x="210" y="316" font-size="12" text-anchor="middle" fill="#6b7a8d">few orders → the only partner is far away</text>
+<text x="560" y="316" font-size="12" text-anchor="middle" fill="#6b7a8d">many orders → a close partner almost always exists</text>
+<text x="380" y="346" font-size="12.5" text-anchor="middle" fill="#1a2b3c" font-weight="bold">Density sets the poolable population before any threshold is tuned.</text>
+</svg>
+<figcaption>In a sparse zone the only available partner is far away, so pooling either forces a big detour or doesn't happen. In a dense zone close partners are everywhere, so the same rules produce far more pairs — and better ones.</figcaption>
+</figure>
+
+<p>The maths is unforgiving in a way that turns out to be useful. The number of candidate pairs in a window grows roughly with the <em>square</em> of the orders in it.</p>
+
+<div class="eqbox">
+$$ \text{candidate pairs} \;\approx\; \binom{n}{2} \;=\; \frac{n(n-1)}{2}\;\sim\;\frac{n^{2}}{2} $$
+<div class="lbl">\(n\) = orders in one zone-window; doubling \(n\) roughly quadruples the partners available — at no extra experience cost</div>
+</div>
+
+<p>That single fact reframes the highest-leverage move in the whole system. Loosening a threshold buys coverage, but pays for it in experience — you slide along the trade-off curve. Raising density buys coverage <em>and</em> lets you <em>tighten</em> the thresholds: smaller detours, tighter windows, and still more pooling than before. Density doesn't move you along the curve; it lifts the whole curve. It is the rare lever that improves both sides of the trade at once — which is exactly the definition of good pooling rather than more pooling.</p>
+
+<p>And that is why pooling and Growth are not separate stories. The cleanest way to increase good pooling in a zone is to make that zone denser — acquire more customers and onboard more restaurants where demand already clusters, or is close to clustering. Marketing aimed at densifying those zones compounds in a way a pooling threshold never can: every new order raises the pool of potential partners for every existing order, a genuine network effect. A pooling team optimising alone is tuning dials on a fixed population; a pooling team working with Growth is enlarging the population the dials act on. The two should be reading the same zone map.</p>
+
+<p>Density also has a geography and a clock. A tower cluster that's dense at 8pm is empty at 3pm, so the poolable population is a property of zone <em>and</em> window — the same <span style="white-space:nowrap">\(z,t\)</span> grain the marketplace-health index is computed on. There is no single citywide density any more than there is a single citywide stress level.</p>
+
+<h2>When riders are scarce, pooling leans in</h2>
+<p>When riders are scarce, pooling gets turned <em>up</em>, not down. It's one of the actions a stressed marketplace reaches <em>for</em> — and the companion piece on network health places it second on the response ladder.</p>
+
+<p>The reason is what the alternative actually is. When orders outrun free riders, not pooling doesn't buy you a fast solo delivery — it buys you an order sitting in a queue with no rider to take it at all. Against that, putting two compatible orders on one scarce rider serves two customers instead of leaving one stranded. So as stress rises, pooling eligibility <em>opens up</em> rather than closing down: it becomes a lever for stretching supply exactly when supply is shortest.</p>
+
+<p>That's why supply stress belongs in the eligibility gate as a live input, not a fixed setting. The same marketplace-health signal that tells the network it's short of riders is the signal that tells pooling to lean in — the two systems read the same number and move together, in the same direction.</p>
+
+<div class="ref">&#8627; On the network-health side of the story — how a platform detects a rider shortage and what it does about it — pooling is the <em>second</em> action on the response ladder: <a href="#">What Happens When a Delivery App Runs Out of Riders</a> <em>(link)</em></div>
+
+<h2>Every threshold is a curve, not a switch</h2>
+<p>The underlying conditions set the ceiling. The thresholds we set decide where under that ceiling you operate — and here is the single most important thing I'd want anyone new to this to understand, because it's the reason "just pool more" is a trap.</p>
+
+<p>Take any one threshold and loosen it. Coverage rises — but not linearly, and the experience cost rises faster the further you push. Plotted against how aggressively you pool, the savings curve bends early and flattens, while the experience-cost curve stays low and then accelerates. The job is not to maximise either one. It's to find the point where you've captured almost all of the saving while giving back almost none of the experience — the knee, just before harm takes off.</p>
+
+<p>The two curves bend that way for a concrete reason, not because the picture is drawn to look tidy. When you first loosen a dial you capture the best pairs — the closest partners, the smallest detours — so saving arrives fast; every further step reaches for a worse partner than the last, so each increment adds less, and the curve flattens. Harm runs the opposite way: those first near-ideal pairs barely delay anyone, but pushing further starts admitting genuinely bad pairs — long detours, mismatched promise times — and a single badly-late second delivery costs far more than a marginal one, so the cost curve stays quiet and then climbs steeply.</p>
+
+<figure>
+<svg viewBox="0 0 760 400" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<rect width="760" height="400" fill="#fff"/>
+<text x="40" y="38" font-size="19" font-weight="bold" fill="#1a2b3c">The savings level off; the experience cost takes off</text>
+<text x="40" y="60" font-size="13" fill="#6b7a8d">Both plotted against how aggressively you pool. The operating point is the knee, not the extreme.</text>
+<line x1="80" y1="330" x2="710" y2="330" stroke="#6b7a8d" stroke-width="1.4"/>
+<line x1="80" y1="90" x2="80" y2="330" stroke="#6b7a8d" stroke-width="1.4"/>
+<text x="395" y="372" font-size="13" text-anchor="middle" fill="#1a2b3c" font-weight="bold">how aggressively you pool  &#8594;</text>
+<path d="M80 320 C 200 150, 340 118, 710 108" fill="none" stroke="#2fa36b" stroke-width="3"/>
+<text x="620" y="128" font-size="13" fill="#2fa36b" font-weight="bold">cost saving</text>
+<path d="M80 322 C 340 318, 470 300, 640 110" fill="none" stroke="#d1495b" stroke-width="3"/>
+<text x="560" y="200" font-size="13" fill="#d1495b" font-weight="bold">experience cost</text>
+<line x1="430" y1="90" x2="430" y2="330" stroke="#e8622c" stroke-width="1.6" stroke-dasharray="5 4"/>
+<circle cx="430" cy="150" r="6" fill="#e8622c"/>
+<text x="430" y="82" font-size="12.5" text-anchor="middle" fill="#e8622c" font-weight="bold">operating point (the knee)</text>
+</svg>
+<figcaption>The savings from loosening a dial arrive early and level off; the experience cost stays quiet and then accelerates. You want the knee — almost all of the saving, almost none of the harm.</figcaption>
+</figure>
+
+<p>It's worth being precise about what those two curves actually measure, because the whole optimisation rests on it. The <strong>saving</strong> is the delivery cost you avoid by having one rider carry two orders instead of dispatching two riders. The <strong>harm</strong> is everything that second drop-off can cost: the extra minutes the second-delivered order waits, the refunds those delays trigger, and the slower return — the customer who had a worse experience and comes back a little less often. The saving lands once, up front; the harm lands twice, first as refunds and then, later and quieter, as weaker retention.</p>
+
+<p>Stated formally, the operating point isn't the maximum of either curve. It's where the marginal saving from pooling one more order stops outrunning the marginal harm it causes — with \(\lambda\) the weight the business is willing to place on experience against cost.</p>
+
+<div class="eqbox">
+$$ \theta^{*} \;=\; \arg\max_{\theta}\;\Bigl[\, \text{saving}(\theta)\;-\;\lambda \cdot \text{harm}(\theta) \,\Bigr] $$
+<div class="lbl">The threshold that maximises net value — not coverage, and not raw cost saving</div>
+</div>
+
+<p>Finding that knee for each dial — the timing window, the detour cap, the promised-time gap, the pickup-time cutoff — is most of the work, and it's where an analyst earns the right to say <em>no</em>. Some dials buy coverage cheaply, with almost no experience cost, and you turn those. Others look tempting on a spreadsheet and reliably produce late second deliveries the moment you relax them, and you leave those alone — and you can prove, with the curve, exactly why. The underlying conditions, meanwhile, don't move you along this curve at all; density and supply stress move the whole curve underneath it.</p>
+
+<h2>The word "pooled" hides two outcomes</h2>
+<p>There's a subtler trap, and it's the one that separates a real read from a naive one.</p>
+
+<p>If you measure the experience of "pooled orders" as a single group, you get an average that hides the thing that matters. Because in every pooled pair, somebody is delivered second — and the second order is the one that rides the extra minutes, waits through the first drop-off, and lands late. Split the group by delivery position and the picture changes completely: the order delivered <em>first</em> looks almost identical to an order that was never pooled at all, while the order delivered <em>second</em> carries nearly all of the harm.</p>
+
+<figure>
+<svg viewBox="0 0 760 380" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<rect width="760" height="380" fill="#fff"/>
+<text x="40" y="38" font-size="19" font-weight="bold" fill="#1a2b3c">Averaging the two together buries the finding</text>
+<text x="40" y="60" font-size="13" fill="#6b7a8d">Same pooled orders, split by delivery position. Bars show relative experience harm — no absolute numbers.</text>
+<line x1="120" y1="300" x2="700" y2="300" stroke="#6b7a8d" stroke-width="1.4"/>
+<rect x="150" y="248" width="120" height="52" rx="6" fill="#c9d2dc"/>
+<text x="210" y="330" font-size="13" text-anchor="middle" fill="#1a2b3c">not pooled</text>
+<text x="210" y="348" font-size="12" text-anchor="middle" fill="#6b7a8d">baseline</text>
+<rect x="330" y="240" width="120" height="60" rx="6" fill="#2fa36b" fill-opacity="0.8"/>
+<text x="390" y="330" font-size="13" text-anchor="middle" fill="#1a2b3c">1st delivered</text>
+<text x="390" y="348" font-size="12" text-anchor="middle" fill="#2fa36b" font-weight="bold">~ same as baseline</text>
+<rect x="510" y="110" width="120" height="190" rx="6" fill="#d1495b" fill-opacity="0.85"/>
+<text x="570" y="330" font-size="13" text-anchor="middle" fill="#1a2b3c">2nd delivered</text>
+<text x="570" y="348" font-size="12" text-anchor="middle" fill="#d1495b" font-weight="bold">absorbs nearly all harm</text>
+<line x1="120" y1="205" x2="700" y2="205" stroke="#e8622c" stroke-width="1.6" stroke-dasharray="6 4"/>
+<text x="695" y="198" font-size="12" text-anchor="end" fill="#e8622c" font-weight="bold">the misleading "pooled" average</text>
+</svg>
+<figcaption>Collapse the two positions into one number and you land on the dashed line — a harm that belongs to neither customer. First-delivered barely differs from not-pooled; second-delivered carries it all.</figcaption>
+</figure>
+
+<p>That single distinction reframes the whole strategy. The goal stops being "pool more orders" and becomes "pool far more of the orders that end up delivered first, and far fewer of the ones that end up a painful second." A pooling rate can't see that difference. A position-aware read can — and, as we'll see, it changes how you have to read an experiment, not just how you set strategy.</p>
+
+<h2>The control group decides the answer</h2>
+<p>One more piece of rigour, because it's where honest analysis and motivated analysis part ways — and it's really a question about the <em>denominator</em>.</p>
+
+<p>Suppose you want to know what pooling <em>does</em> to delivery time. The tempting comparison is pooled orders against every other order on the platform. But "every other order" is stuffed with orders that were fast and simple precisely because they were never poolable — a lone order in an empty district was never going to share a ride with anyone. Against that easy backdrop, pooling looks like it inflicts a huge penalty. It doesn't. The right comparison is pooled orders against the orders that were <em>genuinely comparable</em>: the ones that cleared every filter and could have been pooled but weren't — the tightest causal control there is.</p>
+
+<div class="analogy"><p class="t">A useful analogy</p>
+<p>Judging a carpool programme by what fraction of <em>all</em> drivers carpool is misleading — most drivers had no colleague going their way at their time. The honest denominator is drivers who <em>could</em> have shared a ride and didn't. Same discipline here: the only fair baseline for pooling is the set of orders that genuinely had a poolable partner, and a rate — or an effect — measured against anything wider is a mirage.</p></div>
+
+<div class="eqbox">
+$$ \widehat{\tau} \;=\; \underbrace{\mathbb{E}\bigl[Y \mid \text{pooled}\bigr] - \mathbb{E}\bigl[Y \mid \text{eligible, not pooled}\bigr]}_{\text{like-for-like: the honest effect}} \;\ne\; \underbrace{\mathbb{E}\bigl[Y \mid \text{pooled}\bigr] - \mathbb{E}\bigl[Y \mid \text{everyone else}\bigr]}_{\text{naive: inflated by easy orders}} $$
+<div class="lbl">The same question, two control groups — and two opposite conclusions</div>
+</div>
+
+<figure>
+<svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<rect width="760" height="360" fill="#fff"/>
+<text x="40" y="38" font-size="19" font-weight="bold" fill="#1a2b3c">Pick the wrong control and pooling looks far worse than it is</text>
+<text x="40" y="60" font-size="13" fill="#6b7a8d">Same pooled orders, measured against two different comparison groups.</text>
+<line x1="380" y1="90" x2="380" y2="320" stroke="#e3e8ee" stroke-width="1.4"/>
+<text x="200" y="100" font-size="13.5" text-anchor="middle" fill="#d1495b" font-weight="bold">Naive: pooled vs everyone else</text>
+<line x1="70" y1="290" x2="330" y2="290" stroke="#6b7a8d" stroke-width="1.2"/>
+<rect x="95" y="250" width="70" height="40" rx="5" fill="#c9d2dc"/>
+<text x="130" y="312" font-size="12" text-anchor="middle" fill="#6b7a8d">everyone else</text>
+<rect x="235" y="150" width="70" height="140" rx="5" fill="#d1495b" fill-opacity="0.8"/>
+<text x="270" y="312" font-size="12" text-anchor="middle" fill="#6b7a8d">pooled</text>
+<path d="M170 168 L228 168" stroke="#d1495b" stroke-width="2" marker-end="url(#ar)"/>
+<text x="200" y="140" font-size="11.5" text-anchor="middle" fill="#d1495b" font-weight="bold">looks like a huge penalty</text>
+<text x="565" y="100" font-size="13.5" text-anchor="middle" fill="#2fa36b" font-weight="bold">Like-for-like: pooled vs eligible, not pooled</text>
+<line x1="435" y1="290" x2="695" y2="290" stroke="#6b7a8d" stroke-width="1.2"/>
+<rect x="460" y="215" width="70" height="75" rx="5" fill="#c9d2dc"/>
+<text x="495" y="312" font-size="12" text-anchor="middle" fill="#6b7a8d">true-gap control</text>
+<rect x="600" y="190" width="70" height="100" rx="5" fill="#2fa36b" fill-opacity="0.75"/>
+<text x="635" y="312" font-size="12" text-anchor="middle" fill="#6b7a8d">pooled</text>
+<path d="M535 205 L593 205" stroke="#2fa36b" stroke-width="2" marker-end="url(#ar2)"/>
+<text x="565" y="180" font-size="11.5" text-anchor="middle" fill="#2fa36b" font-weight="bold">the honest, small difference</text>
+<defs>
+<marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#d1495b"/></marker>
+<marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#2fa36b"/></marker>
+</defs>
+</svg>
+<figcaption>The naive comparison stuffs the control group with orders that were fast because they were never poolable, exaggerating the penalty. The like-for-like control — orders that cleared every filter but weren't paired — shows the real, smaller difference, and it's concentrated in the second-delivered order.</figcaption>
+</figure>
+
+<p>The payoff of that frame is that the conversation stops being "why is pooling only at <em>X</em>." It becomes: here are exactly the orders we're leaving unpooled, here is what it would cost in delays to capture them, here is the subset we can capture for almost nothing, and here is the subset we should never touch. That's a strategy a product team can act on — not a single number to argue over, but a map with the risk and the opportunity both drawn in.</p>
+
+<h2>Tuning the thresholds: simulate offline, then switchback online</h2>
+<p>The like-for-like control tells you what pooling did in the past. Setting the thresholds is a different question — what pooling <em>would</em> do at a setting you haven't shipped yet — and it takes two steps: a simulator to propose, an experiment to confirm.</p>
+
+<p><strong>Offline, the simulator proposes.</strong> It replays the eligibility and pairing logic over historical orders and, for each candidate value of a threshold, reports the coverage it would produce alongside what it would do to the second-delivered experience. Sweep the detour cap from tight to loose and you get the savings-versus-harm curve directly, order by real order. That gives a defensible starting point for every dial without touching a live customer — which is most of what the knee-finding in the last section actually rests on.</p>
+
+<p><strong>Online, the experiment confirms.</strong> A simulator replays the past; it can't see how riders and customers <em>react</em> when the rules actually change — whether a tighter window quietly reshuffles which orders get riders, whether a looser detour cap frustrates people into cancelling. So the proposed thresholds go into a live test. And the test has to be a <strong>switchback</strong>, not an ordinary user-split A/B, for a structural reason: pooling acts on a shared marketplace. Pooling one customer's order changes which riders and orders are available to everyone else in the zone, so you can't cleanly put one customer in "treatment" and their neighbour in "control" — their experiences aren't independent. A switchback sidesteps that by turning a threshold setting on and off for a whole zone over alternating time windows and comparing like windows against like.</p>
+
+<p>Two metrics define success, and they have to move in the right relationship. The <strong>goal metric is coverage</strong> — more genuinely poolable orders actually pooled. The <strong>guardrail is delivery delay</strong> — how much later an order lands than the time it was promised — because coverage bought by pushing orders past their promise isn't a win, it's just cost quietly moved onto the customer. A setting only passes if coverage rises while delay holds.</p>
+
+<p>Here the "pooled hides two outcomes" point comes back, and now it's an analysis rule, not just a strategy one. When you read the experiment you cannot score "pooled orders" as one bucket. A coverage gain that lands entirely on orders that end up delivered <em>second</em> — the ones carrying the harm — can look like a clean win on the blended average and be a real loss for the customers who felt it. So the guardrail is read position-aware: the delay on the second-delivered order specifically, not smeared across the pair.</p>
+
+<p>And two things can still quietly distort the read, both worth naming out loud:</p>
+
+<ul class="clean">
+<li><strong>Selection between windows.</strong> Because a switchback compares whole zones across time windows, a window that happens to be busier or better-staffed can move coverage and delivery time for reasons that have nothing to do with the threshold. Balancing the windows and running enough alternations is what keeps that noise from masquerading as an effect.</li>
+<li><strong>Interference from the other stress actions.</strong> Pooling doesn't run alone. If demand-reshaping fires in the same zone during an "on" window, it pulls the serviceable radius inward and shrinks the very population of orders that were poolable in the first place. Because it fires on the same signal for on and off windows alike, it doesn't <em>bias</em> the headline — but it does mean the experiment is silent on the interaction: one action is quietly changing the other's raw material. Acknowledging that operational interference, not just checking for statistical bias, is the difference between a result that survives the second follow-up question and one that falls over on it.</li>
+</ul>
+
+<h2>The questions worth answering</h2>
+<p>Most of what I've described happens without the customer's knowledge, and the most interesting open questions are about whether it should — and about what the data can and can't yet tell us.</p>
+
+<ul class="clean">
+<li>Should we simply ask? A <em>saver</em> delivery option — slightly slower, slightly cheaper, explicitly poolable — turns a hidden trade-off into the customer's own choice. It's also the cleanest experiment we could run: consent removes the guesswork about what people will tolerate. It could lift willingness to pool, or cannibalise full-price delivery. Worth testing, not assuming.</li>
+<li>Should we tell customers their order is being pooled, and when? Telling them once a rider and route are locked may set expectations without alarming anyone; telling them too early, before anything is certain, just invites worry. The honest version is that we don't yet know the effect on trust or on repeat ordering — which is exactly why it deserves a measured trial rather than an opinion.</li>
+<li>What do we owe the order delivered second? If pooling systematically asks one of two customers to wait, is it enough that it stays inside a promised window — or does the second customer deserve something back for absorbing a cost they never agreed to?</li>
+<li>Should coverage flex with the health of the network? Pooling earns its keep when riders are scarce and matters far less when they're plentiful — which argues for eligibility that opens and closes with stress rather than a fixed setting. That's more complex to run and to measure. Is it worth it?</li>
+<li>And the biggest lever of all sits outside the algorithm: if density is what makes good pooling possible, how much of the pooling roadmap is really a Growth roadmap — densifying the right zones — dressed in operations language?</li>
+</ul>
+
+<p>Perfect pooling isn't the goal, and neither is maximum pooling. The goal is pooling the customer would have agreed to if we'd asked — enough to make the economics work, restrained enough that the person delivered second still orders again next week. Getting there is less about the algorithm than about who is willing to define the measurement, read it without flinching, and defend the trade-offs it reveals. That, more than any single model, is the job.</p>
+
+<hr class="end"/>
+<p class="sig"><b>Atif Salman</b> writes about measurement, experimentation, and the analytics behind on-demand marketplaces.</p>
+
+
+</article>
+</body>
+</html>
